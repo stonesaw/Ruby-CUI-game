@@ -1,7 +1,8 @@
 #ruby -Ku
-require 'io/console' #TO DO
+
 require_relative './class'
 
+Key.new()
 Map.new([
     [0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0],
@@ -13,19 +14,33 @@ Map.new([
 [
     "・",
     "mm"
-])
+], width: 30,height: 10)
 
-img = Sprite.new(0, 0, "ｃ")
+img = Sprite.new(Map.width / 2, Map.height / 2, "ｃ")
 
-count = 0
+# main loop
 loop do
-    count += 1
+    # TO DO 
+    # update系は main loop内に隠しといておきたい
     Map.update
+    Key.update
 
-    #sprite
-    img.x += 1 if (count % 10) == 0
-    img.y += 1 if (count % 20) == 0
+    break if Key.down?(Key::ESCAPE)
+    break if Key.down?(Key::RETURN)
+    
+    # sprite
+    img.x += 1 if Key.down?("d")
+    img.x -= 1 if Key.down?("a")
+    img.y += 1 if Key.down?("s")
+    img.y -= 1 if Key.down?("w")
+
+    img.x += 1 if Key.down?("6")
+    img.x -= 1 if Key.down?("4")
+    img.y += 1 if Key.down?("8")
+    img.y -= 1 if Key.down?("2")
+    
+    break if (img.x >= Map.width) || (img.y >= Map.height) || (img.x < 0) || (img.y < 0)
+    
     img.draw
     Map.draw
-    break if (img.x >= Map.width || img.y >= Map.width)
 end
