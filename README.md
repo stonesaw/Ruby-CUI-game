@@ -1,6 +1,17 @@
-# Ruby-CUI-game
-**2020-春休み課題**  
-**CUI(CL)のゲーム用ライブラリ**  
+# Monochrome-Ruby
+__モノクロ Ruby__  
+CUI(CLI)のゲーム用ライブラリ  
 
-タイトルはまだ未定...  
+# Class
+- ## Map
+- ## Sprite
+- ## Key
+
+# Otner  
+2020-春休み課題  
+更新中... 
+
 DXRubyのクラスや関数を参考にさせてもらっています(^__^)v  
+Win32APIを使っています  
+
+__需要 is nil !__
