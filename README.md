@@ -7,7 +7,7 @@ CUI(CLI)のゲーム用ライブラリ
 - ## Sprite
 - ## Key
 
-# Otner  
+# Other  
 2020-春休み課題  
 更新中... 
 
