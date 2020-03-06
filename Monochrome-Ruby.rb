@@ -23,19 +23,19 @@ class Sprite
         @is_vanish = false
     end
 
-    def draw
-        if @is_vanish == false
-            Map.drawing << self
-        end
-    end
+    # def draw
+    #     if @is_vanish == false
+    #         Map.drawing << self
+    #     end
+    # end
 
-    def self.draw(sprites_ary)
-        sprites_ary.length.times do |i|
-            if sprites_ary[i].vanished? == false
-                Map.drawing << sprites_ary[i]
-            end
-        end
-    end
+    # def self.draw(sprites_ary)
+    #     sprites_ary.length.times do |i|
+    #         if sprites_ary[i].vanished? == false
+    #             Map.drawing << sprites_ary[i]
+    #         end
+    #     end
+    # end
     
     def hit(sprites_ary)
         if sprites_ary.class == Array
@@ -204,76 +204,88 @@ end
 
 class Map
     def initialize(map: [[]], text_hash: {0 => "・"}, width: map[0].length, height: map.length)
-        @@drawing = []
-        @@map = map
-        @@text_hash = text_hash
-        @@default_text = @@text_hash.first[1]
-        @@map.length.times do |y|
-            @@map[0].length.times do |x|
-                if !(@@text_hash.include?(@@map[y][x]) ||  @@map[y][x] == -1)
+        # @@drawing = []
+        @map = map
+        @text_hash = text_hash
+        @default_text = @text_hash.first[1]
+        @map.length.times do |y|
+            @map[0].length.times do |x|
+                if !(@text_hash.include?(@map[y][x]) ||  @map[y][x] == -1)
                     puts "ERROR : Map.new"
-                    puts "i dont know map's num => #{@@map[y][x]}"
+                    puts "i dont know map's num => #{@map[y][x]}"
                     exit
                 end
             end
         end
-        @@width = width
-        @@height = height
-        if @@width < @@map[0].length
+        @width = width
+        @height = height
+        if @width < @map[0].length
             puts "ERROR : Map.new"
-            puts "map width(#{@@width}) less than map length(#{@@map[0].length})"
+            puts "map width(#{@width}) less than map length(#{@map[0].length})"
             exit
-        elsif @@width > @@map[0].length
-            need = @@width - @@map[0].length
-            @@map.length.times do |i|
+        elsif @width > @map[0].length
+            need = @width - @map[0].length
+            @map.length.times do |i|
                 need.times do
-                    if @@text_hash.include?(0)
-                        @@map[i] << 0
+                    if @text_hash.include?(0)
+                        @map[i] << 0
                     else
-                        @@map[i] << -1 #Map.default_text
+                        @map[i] << -1 #Map.default_text
                     end
                 end
             end
         end
 
-        if @@height < @@map.length
+        if @height < @map.length
             puts "ERROR : Map.new"
-            puts "map height(#{@@height}) less than map length(#{@@map.length})"
+            puts "map height(#{@height}) less than map length(#{@map.length})"
             exit
-        elsif @@height > @@map.length
-            need = @@height - @@map.length
+        elsif @height > @map.length
+            need = @height - @map.length
             need.times do |i|
                 x_ary = []
-                @@width.times do
-                    if @@text_hash.include?(0)
+                @width.times do
+                    if @text_hash.include?(0)
                         x_ary << 0
                     else
                         x_ary << -1 #Map.default_text
                     end
                 end
-                @@map << x_ary
+                @map << x_ary
             end
         end
     end
 
-    def self.draw
-        @@map.length.times do |y|
+    def draw(drawing = [])# drawing is array
+        @map.length.times do |y|
             x = 0
-            @@map[0].length.times do
+            @map[0].length.times do # x
                 flg = 0
-                @@drawing.length.times do |i|
-                    if (x == @@drawing[i].x && y == @@drawing[i].y)
-                        print @@drawing[i].text
-                        flg = 1
-                        x += (@@drawing[i].width / 2 - 1)
-                        break
+                drawing.length.times do |i|
+                    if drawing[i].class == Array
+                        sprites_ary = drawing[i]
+                        sprites_ary.length.times do |j|
+                            if (x == sprites_ary[j].x && y == sprites_ary[j].y) && sprites_ary[j].vanished? == false
+                                print sprites_ary[j].text
+                                flg = 1
+                                x += (sprites_ary[j].width / 2 - 1)
+                                break
+                            end
+                        end
+                    else# drawing[i] is not array
+                        if (x == drawing[i].x && y == drawing[i].y) && drawing[i].vanished? == false
+                            print drawing[i].text
+                            flg = 1
+                            x += (drawing[i].width / 2 - 1)
+                            break
+                        end
                     end
                 end
                 if flg == 0
-                    if @@map[y][x] == -1
+                    if @map[y][x] == -1
                         print Map.default_text
                     else
-                        print @@text_hash[@@map[y][x]]
+                        print @text_hash[@map[y][x]]
                     end
                 end
                 x += 1
@@ -282,38 +294,37 @@ class Map
         end
     end
     
-    def self.update
-        @@drawing = []
-        system("cls")
-    end
+    # def update
+    #     @@drawing = []
+    # end
 
-    def self.text=(ary)
+    def text=(ary)
         if (ary.length != 2) || (ary[0].class != Fixnum) || (ary[1].class != String)
             puts "ERROR : Argument Error from Map#text="
             puts "Map.text = [hash_num, new_text]"
             exit
         end
-        @@text_hash[ary[0]] = ary[1]
+        @text_hash[ary[0]] = ary[1]
     end
 
-    def self.default_text
-        return @@default_text
+    def default_text
+        return @default_text
     end
 
-    def self.default_text=(str)
-        @@default_text = str
+    def default_text=(str)
+        @default_text = str
     end
 
-    def self.drawing
-        return @@drawing
+    # def self.drawing
+    #     return @@drawing
+    # end
+
+    def width
+        return @width
     end
 
-    def self.width
-        return @@width
-    end
-
-    def self.height
-        return @@height
+    def height
+        return @height
     end
 end
 
