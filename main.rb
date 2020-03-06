@@ -2,45 +2,71 @@
 
 require_relative './class'
 
-Key.new()
-Map.new([
-    [0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0],
-    [0,1,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0]
-],
-[
-    "・",
-    "mm"
-], width: 30,height: 10)
+Map.new(text_hash: {0 => "・"}, width: 60, height: 10)
 
-img = Sprite.new(Map.width / 2, Map.height / 2, "ｃ")
+me = Sprite.new(0, 0, "ｃ")
+enemies = []
+enemies << Sprite.new(Map.width / 2, Map.height / 2, "▲")
+enemies << Sprite.new(Map.width / 2 + 5, 0, "▲")
+
+walls = []
+Map.width.times do |i|
+    # next if (i == 10 || i == 16)
+    walls << Sprite.new(i, Map.height - 1, "■")
+end
+
+g = 1
+flg = 0
+score = 0
 
 # main loop
 loop do
-    # TO DO 
-    # update系は main loop内に隠しといておきたい
+    # --------
     Map.update
     Key.update
+    # --------
 
+    # code
     break if Key.down?(Key::ESCAPE)
-    break if Key.down?(Key::RETURN)
-    
-    # sprite
-    img.x += 1 if Key.down?("d")
-    img.x -= 1 if Key.down?("a")
-    img.y += 1 if Key.down?("s")
-    img.y -= 1 if Key.down?("w")
 
-    img.x += 1 if Key.down?("6")
-    img.x -= 1 if Key.down?("4")
-    img.y += 1 if Key.down?("8")
-    img.y -= 1 if Key.down?("2")
+    me.x += 1 if Key.down?("d")
+    me.x -= 1 if Key.down?("a")
     
-    break if (img.x >= Map.width) || (img.y >= Map.height) || (img.x < 0) || (img.y < 0)
+    if me.touch_foot(walls)
+        me.y -= 4 if Key.down?(" ")
+    else
+        me.y += g
+    end
     
-    img.draw
+    enemies.length.times do |i|
+        if !(enemies[i].touch_foot(walls))
+            enemies[i].y += g
+        end
+    end
+
+    if me.touch_foot(enemies)
+        me.y += 1
+        col = me.check(enemies).first
+        if col.nil? == false
+            col.vanish
+            score += 100
+        end
+    end
+    Sprite.clean(enemies)
+
+    break if (me.x >= Map.width) || (me.y >= Map.height) || (me.x < 0) || (me.y < 0)
+    if me === enemies
+        puts "GAME OVER!"
+        me.text = "×"
+        flg = 1
+    end
+
+    puts "score : #{score}"
+    Sprite.draw(walls)
+    me.draw
+    Sprite.draw(enemies)
     Map.draw
+    sleep(0.01)
+
+    break if flg == 1
 end
