@@ -1,6 +1,6 @@
 #ruby -Ku
 
-require_relative './class'
+require_relative './../Monochrome-Ruby'
 
 Map.new(text_hash: {0 => "・"}, width: 60, height: 10)
 

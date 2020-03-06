@@ -1,6 +1,6 @@
 #ruby -Ku
 
-require_relative './../class'
+require_relative './../Monochrome-Ruby'
 
 Map.new(map: [
     [0,0,0,0,0,0,0,0],

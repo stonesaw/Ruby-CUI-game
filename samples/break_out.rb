@@ -1,6 +1,6 @@
 #ruby -Ku
 # break out - ブロック崩し
-require './../class'
+require './../Monochrome-Ruby'
 
 Map.new([[]], {0 => "・"}, width: 32, height: 24)
 
