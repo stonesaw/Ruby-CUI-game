@@ -1,19 +1,26 @@
 # Monochrome-Ruby
 __モノクロ Ruby__  
-CUI(CLI)のゲーム用ライブラリ  
+CUI(CLI)のゲーム用ライブラリ
+
+- Ruby 2. 6. 5  
+- Ruby 2. 1. 6  
+で動作確認済み
+
+# 使い方
+git clone, ZIPファイルなどでダウンロードしてrequire(_relative)すれば使えます。  
+サンプルやチュートリアルも少しですが作りました。
 
 # Comment  
 2020-春休み課題  
 ライブラリは完成！
 
-DXRubyのクラスや関数を参考にさせてもらっています(^__^)v  
-かなり違うところもあるけど . . .  
-Win32APIを使っています  
+DXRubyのクラスや関数を参考にさせてもらっています(^_^)v  
+かなり違うけど . . .  
+Win32APIを使ってます。
 
 __需要 is nil !__
 
-# Class 
-(なんとなく作ってみる)
+# Class
 - ## Map
     - ## Map.new(map: [[]], text_hash: {0 => "  "}, width: map[0].length, height: map.length, default_text: -1)
         Mapオブジェクトを生成します。
