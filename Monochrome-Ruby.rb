@@ -357,11 +357,32 @@ end
 class Key
   ESCAPE = 0x1b
   RETURN = 0x0d
+  BACKSPACE = 0x08
+  DELETE = 0x53
+  TAB = 0x09
   UP = 0x48
   DOWN = 0x50
   RIGHT = 0x4d
   LEFT = 0x4b
   SPACE = " "
+  HOME = 0x47
+  K_END = 0x4f
+  PAGEUP = 0x49
+  PAGEDOWN = 0x51
+  INSERT = 0x52
+  F1 = 0x3b
+  F2 = 0x3c
+  F3 = 0x3d
+  F4 = 0x3e
+  F5 = 0x3f
+  F6 = 0x40
+  F7 = 0x41
+  F8 = 0x42
+  F9 = 0x43
+  F10 = 0x44
+  F11 = 0x45
+  F12 = 0x46
+  ANY = ""
 
   def initialize
     @@kbhit = Win32API.new('msvcrt','_kbhit',[],'l')
@@ -393,6 +414,7 @@ class Key
 
     def down?(key_code)
       if @@pressed == true
+        return true if key_code == ANY
         @@key = @@key.chr if key_code.class == String
 
         if @@key == key_code
