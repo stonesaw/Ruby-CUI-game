@@ -1,7 +1,6 @@
 #ruby -Ku
 require_relative './../../Monochrome-Ruby'
 require_relative './../scene-editor'
-require_relative './class'
 require_relative './title-life'
 require_relative './play'
 require_relative './menu'
