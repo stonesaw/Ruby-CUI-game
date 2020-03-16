@@ -1,103 +1,307 @@
 #ruby -Ku
 require_relative './../Monochrome-Ruby'
 
-# 2次元配列[height][width] を作成
-map = Map.new(text_hash: {0 => "　"}, width: 168, height: 20)
-# マリオ
-me = Sprite.new(1, 5, ["ｃ", "人"])
+# スーパーマリオ(簡易版)
 
-# 敵(クリボー)
-enemies = []
-enemies << Sprite.new(14, map.height - 2, "▲")
-enemies << Sprite.new(30, 0, "▲")
+# class 自機
+class Me < Sprite
+  def initialize(x, y, text, state = 0)
+    super(x, y, text)
+    @state = state
+    @jump = 0
+  end
 
-# --- ブロック生成 ---
-# 地面
-walls = []
-map.width.times do |i|
-  next if (i == 42 || i == 43)
-  next if (59 <= i && i <= 61)
-  next if (124 <= i && i <= 125)
-  walls << Sprite.new(i, map.height - 1, "■")
+  def update
+    # ジャンプ
+    if self.touch_foot($wall) || self.touch_foot($block) || self.touch_foot($hatena) || self.touch_foot($dokan)
+      @jump = 1 if Key.down?(Key::SPACE)
+    else
+      # 重力
+      self.y += 1
+    end
+
+    if 0 < @jump && @jump < 3
+      self.y -= 3
+      @jump += 1
+    elsif @jump == 3
+      self.y -= 2
+      @jump = 0
+    end
+
+    # ブロックをたたく
+    if @jump > 0 && (self.touch_head($block) || self === $block)
+      @jump = 0
+      col = [
+        self.check($block, y: -1).first,
+        self.check($block, y: -2).first,
+        self.check($block).first
+      ].compact!
+      unless col == nil
+        col.first.vanish
+      end
+      self.y += 1 if self.state == 1
+      Sprite.clean($block)
+    end
+
+    # ハテナブロックをたたく
+    if @jump > 0 && (self.touch_head($hatena) || self === $hatena)
+      @jump = 0
+      col = [
+        self.check($hatena, y: -1).first,
+        self.check($hatena, y: -2).first,
+        self.check($hatena).first
+      ].compact!
+      unless col == nil
+        col = col.first
+        if col.text[0] == "？" || col.text[0] == "  "
+          col.text[0] = "■"
+          if col.item == "coin"
+            $coin += 1
+            $score += 200
+          elsif col.item == "mushroom"
+            $mushroom << Mushroom.new(col.x, col.y - 1, "茸")
+          end
+        else
+          self.y += 1
+        end
+      end
+      self.y += 1 if self.state == 1
+    end
+
+    # キノコを取る
+    if self === $mushroom
+      col = self.check($mushroom).first
+      if col
+        col.vanish
+        if @state == 0
+          @state = 1
+          self.y -= 1
+        end
+        $score += 1000
+      end
+      Sprite.clean($mushroom)
+    end
+
+    self.text = ["ｃ"] if @state == 0
+    self.text = ["ｃ", "人"] if @state == 1
+
+    # 敵を踏む
+    if self.touch_foot($enemies)
+      col = self.check($enemies, y: 1).first
+      unless col == nil
+        col.vanish
+        $score += 100
+        self.y -= 2
+      end
+      Sprite.clean($enemies)
+    end
+
+    # 敵との衝突
+    if self === $enemies || self.touch_right($enemies) || self.touch_left($enemies)
+      if self.state == 0
+        puts "============"
+        puts " GAME OVER!"
+        puts "============"
+        self.text = "×"
+        self.state = -1
+      else
+        self.state -= 1
+        col = [
+          self.check($enemies).first,
+          self.check($enemies, x: 1).first,
+          self.check($enemies, x: -1).first
+        ].compact!
+        unless col == nil
+          col.first.vanish
+          Sprite.clean($enemies)
+        end
+      end
+    end
+  end
+
+  def state
+    return @state
+  end
+
+  def state=(val)
+    @state = val
+  end
 end
 
+# class 敵
+class Enemy < Sprite
+  def initialize(x, y, text, dx = -1)
+    super(x, y, text)
+    @dx = dx
+  end
+
+  def self.update(sprite)
+    sprite.length.times do |i|
+      # 向きを変える
+      sprite[i].dx = -1 if sprite[i].touch_right($block) || sprite[i].touch_right($hatena) || sprite[i].touch_right($dokan)
+      sprite[i].dx = 1 if sprite[i].touch_left($block) || sprite[i].touch_left($hatena) || sprite[i].touch_left($dokan)
+      if sprite[i].x >= 0
+        if sprite[i].touch_foot($wall) || sprite[i].touch_foot($block) || sprite[i].touch_foot($hatena) || sprite[i].touch_foot($dokan)
+          sprite[i].x += sprite[i].dx
+        end
+      end
+    end
+  end
+
+  def dx
+    return @dx
+  end
+
+  def dx=(val)
+    @dx = val
+  end
+end
+
+# class ハテナブロック
+class Hatena < Sprite
+  def initialize(x, y, text, item)# item => str
+    super(x, y, text)
+    @item = item
+  end
+
+  def item
+    return @item
+  end
+end
+
+# class キノコ
+class Mushroom < Sprite
+  def initialize(x, y, text, dx = 1)
+    super(x, y, text)
+    @dx = dx
+  end
+
+  def self.update(sprite)
+    sprite.length.times do |i|
+      # 向きを変える
+      sprite[i].dx = -1 if sprite[i].touch_right($block) || sprite[i].touch_right($hatena) || sprite[i].touch_right($dokan)
+      sprite[i].dx = 1 if sprite[i].touch_left($block) || sprite[i].touch_left($hatena) || sprite[i].touch_left($dokan)
+      
+      if sprite[i].touch_foot($wall) || sprite[i].touch_foot($block) || sprite[i].touch_foot($hatena) || sprite[i].touch_foot($dokan)
+        sprite[i].x += sprite[i].dx
+      else
+        sprite[i].y += 1
+      end
+    end
+  end
+
+  def dx
+    return @dx
+  end
+
+  def dx=(val)
+    @dx = val
+  end
+end
+
+# 2次元配列[height][width] を作成
+map = Map.new(width: 190, height: 20)
+# 高さ
+h_ground = map.height - 2# 地面の高さ
 h_nomal = map.height - 5# ブロックの基本の高さ
 h_high = map.height - 10# 高いブロックの高さ
 
+# マリオ
+mario = Me.new(4, h_ground, "ｃ")
+# アイテム
+$mushroom = []
+star = []
+# 敵(クリボー)
+$enemies = [
+  Enemy.new(29, h_ground, "▲"),
+  Enemy.new(42, h_ground, "▲"),
+  Enemy.new(49, h_ground, "▲"),
+  Enemy.new(50, h_ground, "▲")
+]
+# --- ブロック生成 ---
+# 地面
+$wall = []
+map.width.times do |i|
+  next if (i == 64 || i == 65)
+  next if (81 <= i && i <= 83)
+  next if (146 <= i && i <= 147)
+  $wall << Sprite.new(i, map.height - 1, "■")
+end
 # 壊せるブロック
-block = [
-  Sprite.new(8, h_nomal, "□"),
-  Sprite.new(10, h_nomal, "□"),
-  Sprite.new(12, h_nomal, "□"),
-  Sprite.new(50, h_nomal, "□"),
-  Sprite.new(52, h_nomal, "□"),
-  Sprite.new(64, h_high, "□"),
-  Sprite.new(65, h_high, "□"),
-  Sprite.new(66, h_high, "□"),
-  Sprite.new(67, h_nomal, "□"),
+$block = [
+  Sprite.new(22, h_nomal, "□"),
+  Sprite.new(24, h_nomal, "□"),
+  Sprite.new(26, h_nomal, "□"),
   Sprite.new(72, h_nomal, "□"),
-  Sprite.new(90, h_nomal, "□"),
-  Sprite.new(93, h_high, "□"),
-  Sprite.new(94, h_high, "□"),
-  Sprite.new(95, h_high, "□"),
-  Sprite.new(100, h_high, "□"),
-  Sprite.new(101, h_nomal, "□"),
-  Sprite.new(102, h_nomal, "□"),
-  Sprite.new(103, h_high, "□"),
-  Sprite.new(139, h_nomal, "□"),
-  Sprite.new(140, h_nomal, "□"),
-  Sprite.new(142, h_nomal, "□")
+  Sprite.new(74, h_nomal, "□"),
+  Sprite.new(86, h_high, "□"),
+  Sprite.new(87, h_high, "□"),
+  Sprite.new(88, h_high, "□"),
+  Sprite.new(89, h_nomal, "□"),
+  Sprite.new(94, h_nomal, "□"),
+  Sprite.new(112, h_nomal, "□"),
+  Sprite.new(115, h_high, "□"),
+  Sprite.new(116, h_high, "□"),
+  Sprite.new(117, h_high, "□"),
+  Sprite.new(122, h_high, "□"),
+  Sprite.new(123, h_nomal, "□"),
+  Sprite.new(124, h_nomal, "□"),
+  Sprite.new(125, h_high, "□"),
+  Sprite.new(161, h_nomal, "□"),
+  Sprite.new(162, h_nomal, "□"),
+  Sprite.new(164, h_nomal, "□")
 ]
 8.times do |x|
-  block << Sprite.new(53 + x, h_high, "□")
+  $block << Sprite.new(75 + x, h_high, "□")
 end
-
 # ハテナブロック
-hatena = []
-hatena << Sprite.new(5, h_nomal, "？")
-hatena << Sprite.new(9, h_nomal, "？")
-hatena << Sprite.new(10, h_high, "？")
-hatena << Sprite.new(11, h_nomal, "？")
-hatena << Sprite.new(51, h_nomal, "？")
-hatena << Sprite.new(67, h_high, "？")
-hatena << Sprite.new(73, h_nomal, "□")# 隠れスター
-hatena << Sprite.new(78, h_nomal, "？")
-hatena << Sprite.new(81, h_nomal, "？")
-hatena << Sprite.new(81, h_high, "？")
-hatena << Sprite.new(84, h_nomal, "？")
-hatena << Sprite.new(101, h_high, "？")
-hatena << Sprite.new(102, h_high, "？")
-hatena << Sprite.new(141, h_nomal, "？")
-
+$hatena = [
+  Hatena.new(18, h_nomal, "？", "coin"),
+  Hatena.new(23, h_nomal, "？", "mushroom"),
+  Hatena.new(24, h_high, "？", "coin"),
+  Hatena.new(25, h_nomal, "？", "coin"),
+  Hatena.new(59, h_nomal, "  ", "mushroom"),#隠れキノコ
+  Hatena.new(73, h_nomal, "？", "coin"),
+  Hatena.new(89, h_high, "？", "coin"),
+  Hatena.new(95, h_nomal, "□", "star"),# 隠れスター
+  Hatena.new(100, h_nomal, "？", "coin"),
+  Hatena.new(103, h_nomal, "？", "coin"),
+  Hatena.new(103, h_high, "？", "mushroom"),
+  Hatena.new(106, h_nomal, "？", "coin"),
+  Hatena.new(123, h_high, "？", "coin"),
+  Hatena.new(124, h_high, "？", "coin"),
+  Hatena.new(163, h_nomal, "？", "coin")
+]
 # 土管
-dokan = []
-dokan << Sprite.new(15, map.height - 4, ["|==|", " || ", " || "])
-dokan << Sprite.new(23, h_nomal, ["|==|", " || ", " || ", " || "])
-dokan << Sprite.new(32, h_nomal, ["|==|", " || ", " || ", " || "])
-dokan << Sprite.new(133, map.height - 3, ["|==|", " || "])
-dokan << Sprite.new(149, map.height - 3, ["|==|", " || "])
-
+$dokan = [
+  Sprite.new(30, map.height - 3, ["|==|", " || "]),
+  Sprite.new(38, map.height - 4, ["|==|", " || ", " || "]),
+  Sprite.new(44, map.height - 5, ["|==|", " || ", " || ", " || "]),
+  Sprite.new(52, map.height - 5, ["|==|", " || ", " || ", " || "]),
+  Sprite.new(155, map.height - 3, ["|==|", " || "]),
+  Sprite.new(172, map.height - 3, ["|==|", " || "])
+]
 # 階段
 2.times do |i|
-  pos = 105 if i == 0
-  pos = 119 if i == 1
+  pos = 127 if i == 0
+  pos = 141 if i == 1
   4.times do |x|
     (x+1).times do |y|
-      walls << Sprite.new(pos + x, map.height - 2 - y, "■")
+      $wall << Sprite.new(pos + x, h_ground - y, "■")
     end
   end
 end
 4.times do |y|
-  walls << Sprite.new(123, map.height - 2 - y, "■")
+  $wall << Sprite.new(145, h_ground - y, "■")
 end
 # 階段(下り)
 2.times do |i|
-  pos = 111 if i == 0
-  pos = 126 if i == 1
+  pos = 133 if i == 0
+  pos = 148 if i == 1
   4.times do |x|
     y = 4
     (y - x).times do
-      walls << Sprite.new(pos + x, map.height - 6 + y, "■")
+      $wall << Sprite.new(pos + x, map.height - 6 + y, "■")
       y -= 1
     end
   end
@@ -105,31 +309,32 @@ end
 # 最後の階段
 6.times do |x|
   (x + 1).times do |y|
-    walls << Sprite.new(152 + x, map.height - 2 - y, "■")
+    $wall << Sprite.new(174 + x, h_ground - y, "■")
   end
 end
 6.times do |y|
-  walls << Sprite.new(158, map.height - 2 - y, "■")
+  $wall << Sprite.new(180, h_ground - y, "■")
 end
-
 # 旗
 flag = []
 7.times do |i|
   flag << Sprite.new(map.width - 2, map.height - 3 - i, "| ")
 end
 flag << Sprite.new(map.width - 2, h_high, "▶ ")
-walls << Sprite.new(map.width - 2, map.height - 2, "■")
+$wall << Sprite.new(map.width - 2, h_ground, "■")
 
 # --- Var ---
 flg = 0
-score = 0
-coin = 0
-jump = 0
-power_up = 0
+$pos_flg = 0
+$score = 0
+$coin = 0
+$time = 400
+count = 0
+
 # render_drawで使う
-ren_width = 19
+ren_width = 17
 ren_center = ren_width / 2
-ren_height = 17
+ren_height = 14
 
 # main loop
 loop do
@@ -138,98 +343,96 @@ loop do
 
   system("cls")
   break if Key.down?(Key::ESCAPE)
+  count += 1
+  $time -= 1 if (count % 10) == 0
+  # 移動
+  mario.x += 1 if Key.down?("d") && !mario.touch_right($wall) && !mario.touch_right($dokan)&& !mario.touch_right($block) && !mario.touch_right($hatena)
+  mario.x -= 1 if Key.down?("a") && !mario.touch_left($wall) && !mario.touch_left($dokan) && !mario.touch_left($block) && !mario.touch_left($hatena)
 
-  me.x += 1 if Key.down?("d") && !me.touch_right(walls) && !me.touch_right(dokan)
-  me.x -= 1 if Key.down?("a") && !me.touch_left(walls) && !me.touch_left(dokan)
+  mario.x = 0 if mario.x < 0
+  mario.x = (map.width - 1) if mario.x >= map.width
 
-  me.x = 0 if me.x < 0
-  me.x = (map.width - 1) if me.x >= map.width
-
-  power_up = 1 if Key.down?("1")
-  power_up = 0 if Key.down?("0")
-
-  me.text = ["ｃ"] if power_up == 0
-  me.text = ["ｃ", "人"] if power_up == 1
-  # jump
-  if me.touch_foot(walls) || me.touch_foot(block) || me.touch_foot(hatena) || me.touch_foot(dokan)
-    jump = 1 if Key.down?(Key::SPACE)
-  else
-    # 重力
-    me.y += 1
+  # enemy
+  if mario.x > 66 && $pos_flg == 0
+    $enemies << Enemy.new(76, h_high - 1, "▲")
+    $enemies << Enemy.new(80, h_high - 1, "▲")
+    $pos_flg = 1
+  elsif mario.x > 89 && $pos_flg == 1
+    $enemies << Enemy.new(105, h_ground - 1, "▲")
+    $enemies << Enemy.new(109, h_ground - 1, "▲")
+    $enemies << Enemy.new(110, h_ground - 1, "▲")
+    $pos_flg = 2
+  elsif mario.x > 107 && $pos_flg == 2
+    $enemies << Enemy.new(121, h_ground - 1, "▲")
+    $enemies << Enemy.new(122, h_ground - 1, "▲")
+    $enemies << Enemy.new(125, h_ground - 1, "▲")
+    $enemies << Enemy.new(126, h_ground - 1, "▲")
+    $pos_flg = 3
+  elsif mario.x > 152 && $pos_flg == 3
+    $enemies << Enemy.new(170, h_ground - 1, "▲")
+    $enemies << Enemy.new(171, h_ground - 1, "▲")
+    $pos_flg = 4
   end
 
-  if 0 < jump && jump < 3
-    me.y -= 3
-    jump += 1
-  elsif jump == 3
-    me.y -= 2
-    jump = 0 
+  Enemy.update($enemies) if (count % 3) == 0
+  $enemies.length.times do |i|
+    $enemies[i].y += 1 unless $enemies[i].touch_foot($wall) || $enemies[i].touch_foot($block) || $enemies[i].touch_foot($hatena) || $enemies[i].touch_foot($dokan)
+    $enemies[i].vanish if $enemies[i].y > map.height
   end
+  Sprite.clean($enemies)
 
-  # ブロックをたたく
-  if jump > 0 && (me.touch_head(block) || me === block)
-    jump = 0
-    col = me.check(block, y: -1).first
-    col.vanish if col
-    Sprite.clean(block)
-  end
-  # ハテナブロックをたたく
-  if jump > 0 && (me.touch_head(hatena) || me === hatena)
-    jump = 0
-    col = me.check(hatena, y: -1).first
-    if col
-      if col.text == "？"
-        p "a"
-        col.text = "■"
-        coin += 1
-      end
-    end
-  end
-    
-  # enemies.length.times do |i|
-  #   if !(enemies[i].touch_foot(walls))
-  #     enemies[i].y += 1
-  #   end
-  # end
-  
-  # 敵を踏む
-  if me.touch_foot(enemies)
-    col = me.check(enemies, y: 1).first
-    if col.nil? == false
-      col.vanish
-      score += 100
-    end
-    Sprite.clean(enemies)
-  end
+  # mario
+  mario.update
+  Mushroom.update($mushroom) if (count % 2) == 0
 
-  # draw
-  if me === enemies || me.touch_right(enemies) || me.touch_left(enemies) || me.y > map.height - 2
-    puts "============"
-    puts " GAME OVER!"
-    puts "============"
-    me.text = "×" if power_up == 0
-    me.text = ["×", "人"] if power_up == 1
-    flg = 1
-  end
-  if me === flag
+  # draw msg
+  if mario === flag
     puts "============="
     puts " GAME CLEAR!"
     puts "============="
     flg = 1
   end
-  puts "score : #{score}  coin × #{coin}"
 
-  draw = [me, enemies, block, hatena, flag, dokan, walls]
-
-  if me.x < ren_center
-    map.render_draw(0, map.height - ren_height, ren_width, ren_height, draw)
-  elsif me.x > map.width - 1 - ren_center
-    map.render_draw(map.width - ren_width, map.height - ren_height, ren_width, ren_height, draw)
-  else
-    map.render_draw(me.x - ren_center, map.height - ren_height, ren_width, ren_height, draw)
+  if mario.y > h_ground
+    puts "============"
+    puts " GAME OVER!"
+    puts "============"
+    mario.text = "×"
+    flg = 1
   end
 
-  puts "x: #{me.x}, y: #{me.y} "
+  if $time < 0
+    puts "=========="
+    puts " TIME UP!"
+    puts "=========="
+  end
 
-  break if flg == 1
+  # draw data
+  print "   MARIO            WORLD  TIME\n   "
+  (6 - $score.to_s.length).times do
+    print "0"
+  end
+  print "#{$score}  ◎×"
+  if $coin.to_s.length == 1
+    print "0"
+  end
+  print "#{$coin}    1-1    "
+  (3 - $time.to_s.length).times do
+    print "0"
+  end
+  puts "#{$time}"
+
+  # draw render map
+  draw = [mario, $enemies, $block, $hatena, $mushroom, flag, $dokan, $wall]
+  if mario.x < ren_center
+    map.render_draw(0, map.height - ren_height, ren_width, ren_height, draw)
+  elsif mario.x > map.width - 1 - ren_center
+    map.render_draw(map.width - ren_width, map.height - ren_height, ren_width, ren_height, draw)
+  else
+    map.render_draw(mario.x - ren_center, map.height - ren_height, ren_width, ren_height, draw)
+  end
+
+  puts "x: #{mario.x}, y: #{mario.y} "
+
+  break if flg == 1 || mario.state == -1
 end

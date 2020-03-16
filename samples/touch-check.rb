@@ -21,7 +21,7 @@ loop do
   maru.y += 1 if Key.down?("s")
   maru.y -= 1 if Key.down?("w")
 
-  map.draw([sikaku, maru])
+  map.draw([maru, sikaku])
   puts "maru(#{maru.x}, #{maru.y})"
   puts "sikaku(#{sikaku.x}, #{sikaku.y})"
   puts "maru touch head!" if maru.touch_head(sikaku)

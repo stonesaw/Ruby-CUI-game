@@ -59,10 +59,11 @@ class Map
               sprites[j].y <= y && y <= sprites[j].y + sprites[j].height - 1)
               print sprites[j].text[y - sprites[j].y]
               drawed = 1
-              x += (sprites[j].width - 1)
+              x += (sprites[j].width(y - sprites[j].y) - 1)
               break
             end
           end
+          break if drawed == 1
         end
         if drawed == 0
           if @map[y][x] == -1
@@ -96,10 +97,11 @@ class Map
               sprites[j].y <= y && y <= sprites[j].y + sprites[j].height - 1)
               print sprites[j].text[y - sprites[j].y]
               drawed = 1
-              x += (sprites[j].width - 1)
+              x += (sprites[j].width(y - sprites[j].y) - 1)
               break
             end
           end
+          break if drawed == 1
         end
         if drawed == 0
           if @map[y][x] == -1
@@ -324,12 +326,30 @@ class Sprite
     end
   end
 
-  def width
-    return @max_width
+  def width(height = -1)
+    if height == -1
+      return @max_width
+    elsif height > @text.length
+      raise ArgumentError.new("Sprite#width(height: #{height})over Sprite#height")
+    else
+      @width = 0
+      @text[height].scan(/./) do |i|
+        if /[ぁ-んー－]/ =~ i# 全角ひらがな
+          @width += 1
+        elsif /\A[ｧ-ﾝﾞﾟ]+\z/ =~ i# 半角型カタカナ
+          @width += 0.5
+        elsif /[ -~。-゜]/ =~ i# 半角
+          @width += 0.5
+        else
+          @width += 1
+        end
+      end
+      return @width.round
+    end
   end
 
   def height
-    return @height
+    return @text.length
   end
 end
 
