@@ -1,7 +1,12 @@
 #ruby -Ku
 require_relative './../Monochrome-Ruby'
 
-map = Map.new(
+# 7セグメントディスプレイ
+# 時計のディスプレイ(1文字だけ)を作る
+
+# このプログラムを発展させてキーボードの数字が押されたときにその数を表示させよう！
+
+display = Map.new(
 map: [
     [0, 1, 1, 1, 0],
     [1, 0, 0, 0, 1],
@@ -20,5 +25,5 @@ loop do
 
   break if Key.down?(Key::ESCAPE)
 
-  map.draw
+  display.draw
 end
