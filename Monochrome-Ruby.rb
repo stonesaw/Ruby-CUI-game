@@ -44,22 +44,22 @@ class Map
   end
 
   def draw(drawing = [])
-    @height.times do |y|
+    self.height.times do |y|
       x = 0
-      @width.times do # x
+      self.width.times do # x
         drawed = 0
-        drawing.length.times do |i|
-          if drawing[i].class == Array
-            sprites = drawing[i]
+        drawing.each do |dr|
+          if dr.class == Array
+            sprites = dr
           else
-            sprites = [drawing[i]]
+            sprites = [dr]
           end
-          sprites.length.times do |j|
-            if (x == sprites[j].x && sprites[j].vanished? == false && 
-              sprites[j].y <= y && y <= sprites[j].y + sprites[j].height - 1)
-              print sprites[j].text[y - sprites[j].y]
+          sprites.each do |sp|
+            break if x >= self.width
+            if (x == sp.x && sp.vanished? == false && sp.y <= y && y <= sp.y + sp.height - 1)
+              print sp.text[y - sp.y]
               drawed = 1
-              x += (sprites[j].width(y - sprites[j].y) - 1)
+              x += (sp.width(y - sp.y) - 1)
               break
             end
           end
@@ -79,25 +79,36 @@ class Map
   end
 
   def render_draw(ox, oy, width, height, drawing = [])
+    if ox < 0 || oy < 0
+      puts "off map!"
+    end
     y = (oy + self.height) % self.height
     height.times do # y
-      break if y >= self.height
+      if y >= self.height
+        puts "off map!" 
+        break
+      end
+      break if y - oy >= height
       x = (ox + self.width) % self.width
       width.times do # x
         drawed = 0
-        break if x >= self.width
-        drawing.length.times do |i|
-          if drawing[i].class == Array
-            sprites = drawing[i]
+        if x >= self.width
+          puts "off map!" 
+          break
+        end
+        break if x - ox >= width
+        drawing.each do |dr|
+          if dr.class == Array
+            sprites = dr
           else
-            sprites = [drawing[i]]
+            sprites = [dr]
           end
-          sprites.length.times do |j|
-            if (x == sprites[j].x && sprites[j].vanished? == false && 
-              sprites[j].y <= y && y <= sprites[j].y + sprites[j].height - 1)
-              print sprites[j].text[y - sprites[j].y]
+          sprites.each do |sp|
+            break if x - ox >= width
+            if (x == sp.x && sp.vanished? == false && sp.y <= y && y <= sp.y + sp.height - 1)              
+              print sp.text[y - sp.y]
               drawed = 1
-              x += (sprites[j].width(y - sprites[j].y) - 1)
+              x += (sp.width(y - sp.y) - 1)
               break
             end
           end
@@ -118,9 +129,8 @@ class Map
   end
 
   def text=(ary)
-    if (ary.length != 2) || (ary[0].class != Fixnum) || (ary[1].class != String)
-      raise ArgumentError.new("Map#text= [hash_num, new_text]")
-    end
+    raise ArgumentError.new("Map#text= [hash_num, new_text]") if (ary.length != 2) || !(ary[0].class == Integer || ary[0].class == Symbol) || (ary[1].class != String)
+    raise ArgumentError.new("Map#text=() text_hash undefined => #{ary[0]}") unless text_hash.has_key?(ary[0])
     @text_hash[ary[0]] = ary[1]
   end
 
@@ -334,11 +344,11 @@ class Sprite
     else
       @width = 0
       @text[height].scan(/./) do |i|
-        if /[ぁ-んー－]/ =~ i# 全角ひらがな
+        if /\A[ぁ-んー－]+\z/ =~ i# 全角ひらがな
           @width += 1
         elsif /\A[ｧ-ﾝﾞﾟ]+\z/ =~ i# 半角型カタカナ
           @width += 0.5
-        elsif /[ -~。-゜]/ =~ i# 半角
+        elsif /\A[ -~。-゜]+\z/ =~ i# 半角
           @width += 0.5
         else
           @width += 1
@@ -382,7 +392,7 @@ class Key
   F10 = 0x44
   F11 = 0x45
   F12 = 0x46
-  ANY = ""
+  ANY = :any_key
 
   def initialize
     @@kbhit = Win32API.new('msvcrt','_kbhit',[],'l')
@@ -390,7 +400,7 @@ class Key
     @@pressed = false
   end
 
-  class << self 
+  class << self
     def kbhit()
       if @@kbhit.call != 0
         return true
@@ -415,12 +425,10 @@ class Key
     def down?(key_code)
       if @@pressed == true
         return true if key_code == ANY
-        @@key = @@key.chr if key_code.class == String
-
-        if @@key == key_code
-          return true
+        if key_code.class == String
+          return @@key.chr == key_code ? true : false
         else
-          return false
+          return @@key == key_code ? true : false
         end
       else
         return false

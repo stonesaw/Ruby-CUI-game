@@ -11,17 +11,17 @@ loop do
 
   break if Key.down?(Key::ESCAPE)
   
+  maru.x += 1 if Key.down?("d")
+  maru.x -= 1 if Key.down?("a")
+  maru.y += 1 if Key.down?("s")
+  maru.y -= 1 if Key.down?("w")
+  
   sikaku.x += 1 if Key.down?(Key::RIGHT)
   sikaku.x -= 1 if Key.down?(Key::LEFT)
   sikaku.y += 1 if Key.down?(Key::DOWN)
   sikaku.y -= 1 if Key.down?(Key::UP)
 
-  maru.x += 1 if Key.down?("d")
-  maru.x -= 1 if Key.down?("a")
-  maru.y += 1 if Key.down?("s")
-  maru.y -= 1 if Key.down?("w")
-
-  map.draw([maru, sikaku])
+  map.render_draw(0, 0, 20, 10, [maru, sikaku])
   puts "maru(#{maru.x}, #{maru.y})"
   puts "sikaku(#{sikaku.x}, #{sikaku.y})"
   puts "maru touch head!" if maru.touch_head(sikaku)

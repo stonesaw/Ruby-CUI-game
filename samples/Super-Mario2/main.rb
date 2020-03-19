@@ -8,15 +8,17 @@ require_relative './result'
 
 # マリオの画面遷移などを追加
 # 各シーンごとにファイルを分割
-# 画面(マップ)の大きさは17 * 14
+
+# 画面の幅
 WIDTH = 17
+# 画面の高さ
 HEIGHT = 14
 # rubyでは定数に代入が出来てしまうので.freezeで値を固定(定数に)する
 WIDTH.freeze
 HEIGHT.freeze
 
 # ここで使うシーンを配列に入れる
-# シーンは'title-life', 'play', 'menu'で定義
+# 各シーンは'title-life.rb', 'play.rb', 'menu.rb', 'result.rb'で定義
 Scene.new([
   Title,
   Life,
