@@ -116,38 +116,41 @@ __需要 is nil !__
           # ...
         end
         ```
-        a-z, 0-9,その他記号などは、文字列を引数に渡します
+        a-z, 0-9,その他記号などは、文字列を引数に渡します  
         例)
         ```
         if Key.down?("a")
         if Key.down?("0")
         ```
 - ## KeyCode
-    - ## Key::ESCAPE
-    - ## Key::RETURN
-    - ## Key::UP
-    - ## Key::DOWN
-    - ## Key::RIGHT
-    - ## Key::LEFT
-    - ## Key::SPACE
-    - ## Key::BACKSPACE
-    - ## Key::DELETE
-    - ## Key::TAB
-    - ## Key::HOME
-    - ## Key::K_END
-    - ## Key::PAGEUP
-    - ## Key::PAGEDOWN
-    - ## Key::INSERT
-    - ## Key::F1
-    - ## Key::F2
-    - ## Key::F3
-    - ## Key::F4
-    - ## Key::F5
-    - ## Key::F6
-    - ## Key::F7
-    - ## Key::F8
-    - ## Key::F9
-    - ## Key::F10
-    - ## Key::F11
-    - ## Key::F12
-    - ## Key::ANY
+    |KeyCode|キー|
+    |:---|:---|
+    |Key::ESCAPE | エスケープ
+    |Key::RETURN|エンター
+    |Key::UP|矢印(上)
+    |Key::DOWN|矢印(下)
+    |Key::RIGHT|矢印(右)
+    |Key::LEFT|矢印(左)
+    |Key::SPACE|スペース
+    |Key::BACKSPACE|バックスペース
+    |Key::DELETE|デリート
+    |Key::TAB|タブ
+    |Key::HOME|ホーム
+    |Key::K_END|エンド
+    |Key::PAGEUP|ページアップ
+    |Key::PAGEDOWN|ページダウン
+    |Key::INSERT | インサート
+    |Key::F1|F1
+    |Key::F2|F2
+    |Key::F3|F3
+    |Key::F4|F4
+    |Key::F5|F5
+    |Key::F6|F6
+    |Key::F7|F7
+    |Key::F8|F8
+    |Key::F9|F9
+    |Key::F10|F10
+    |Key::F11|F11
+    |Key::F12|F12
+- Key::ANY  
+    何かのキーが押されたときに真を返す
