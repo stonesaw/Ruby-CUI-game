@@ -1,6 +1,9 @@
 require 'Win32API'
 
 class Map
+  attr_reader :map, :text_hash, :width, :height
+  attr_accessor :default_text
+
   def initialize(map: [[]], text_hash: {0 => "  "}, width: map[0].length, height: map.length, default_text: -1)
     @map = map
     @text_hash = text_hash
@@ -10,7 +13,7 @@ class Map
       @default_text = default_text
     end
     @map.length.times do |y|
-      @map[0].length.times do |x|
+      @map[y].length.times do |x|
         unless @text_hash.include?(@map[y][x]) || @map[y][x] == -1
           raise ArgumentError.new("i dont know text_hash => #{@map[y][x]}")
         end
@@ -79,24 +82,14 @@ class Map
   end
 
   def render_draw(ox, oy, width, height, drawing = [])
-    if ox < 0 || oy < 0
-      puts "off map!"
-    end
+    puts "off map!" if ox < 0 || oy < 0
     y = (oy + self.height) % self.height
     height.times do # y
-      if y >= self.height
-        puts "off map!" 
-        break
-      end
-      break if y - oy >= height
+      break if y >= self.height || y - oy >= height
       x = (ox + self.width) % self.width
       width.times do # x
         drawed = 0
-        if x >= self.width
-          puts "off map!" 
-          break
-        end
-        break if x - ox >= width
+        break if x >= self.width || x - ox >= width
         drawing.each do |dr|
           if dr.class == Array
             sprites = dr
@@ -133,34 +126,14 @@ class Map
     raise ArgumentError.new("Map#text=() text_hash undefined => #{ary[0]}") unless text_hash.has_key?(ary[0])
     @text_hash[ary[0]] = ary[1]
   end
-
-  def map
-    return @map
-  end
-
-  def text_hash
-    return @text_hash
-  end
-
-  def default_text
-    return @default_text
-  end
-
-  def default_text=(str)
-    @default_text = str
-  end
-
-  def width
-    return @width
-  end
-
-  def height
-    return @height
-  end
 end
 
 class Sprite
+  attr_accessor :x, :y
+
   def initialize(x, y, text)
+    raise ArgumentError.new("Sprite#x (#{x}) plz Integer") unless x.class == Integer
+    raise ArgumentError.new("Sprite#y (#{y}) plz Integer") unless y.class == Integer
     @x = x
     @y = y
     if text == ""
@@ -174,18 +147,7 @@ class Sprite
     end
     @max_width = 0
     @height.times do |i|
-      @width = 0
-      @text[i].scan(/./) do |j|
-        if /[ぁ-んー－]/ =~ j# 全角ひらがな
-          @width += 1
-        elsif /\A[ｧ-ﾝﾞﾟ]+\z/ =~ j# 半角型カタカナ
-          @width += 0.5
-        elsif /[ -~。-゜]/ =~ j# 半角
-          @width += 0.5
-        else
-          @width += 1
-        end
-      end
+      @width = text_check(@text[i])
       @max_width = @width.round if @max_width <= @width
     end
     @is_vanish = false
@@ -202,14 +164,12 @@ class Sprite
     else
       sprites_ary = [sprites]
     end
-    sprites_ary.length.times do |i|
-      next if sprites_ary[i].vanished?
-      sp_x = sprites_ary[i].x
-      sp_y = sprites_ary[i].y
-      sp_wid = sp_x + sprites_ary[i].width - 1
-      sp_hei = sp_y + sprites_ary[i].height - 1
+    sprites_ary.each do |sp|
+      next if sp.vanished?
+      sp_wid = sp.x + sp.width - 1
+      sp_hei = sp.y + sp.height - 1
       # judge
-      if ( my_x <= sp_wid && my_y <= sp_hei && my_wid >= sp_x && my_hei >= sp_y)
+      if my_x <= sp_wid && my_y <= sp_hei && my_wid >= sp.x && my_hei >= sp.y
         return true
       end
     end
@@ -232,15 +192,13 @@ class Sprite
       sprites_ary = [sprites]
     end
     return_ary = []
-    sprites_ary.length.times do |i|
-      next if sprites_ary[i].vanished?
-      sp_x = sprites_ary[i].x
-      sp_y = sprites_ary[i].y
-      sp_wid = sp_x + sprites_ary[i].width - 1
-      sp_hei = sp_y + sprites_ary[i].height - 1
+    sprites_ary.each do |sp|
+      next if sp.vanished?
+      sp_wid = sp.x + sp.width - 1
+      sp_hei = sp.y + sp.height - 1
       # judge
-      if ( my_x <= sp_wid && my_y <= sp_hei && my_wid >= sp_x && my_hei >= sp_y)
-        return_ary << sprites_ary[i]
+      if my_x <= sp_wid && my_y <= sp_hei && my_wid >= sp.x && my_hei >= sp.y
+        return_ary << sp
       end
     end
     return return_ary
@@ -288,29 +246,13 @@ class Sprite
     end        
   end
 
-  def x
-    return @x
-  end
-
-  def x=(val)
-    @x = val
-  end
-
-  def y
-    return @y
-  end
-
-  def y=(val)
-    @y = val
-  end
-
   def text
     return @text
   end
 
   def text=(str)
     if str == ""
-      raise ArgumentError.new("Sprite#text Cannot use ''")
+      raise ArgumentError.new("Sprite#text= Cannot use ''")
     elsif str.class == Array
       @text = str
       @height = @text.length
@@ -320,18 +262,7 @@ class Sprite
     end
     @max_width = 0
     @height.times do |i|
-      @width = 0
-      @text[i].scan(/./) do |j|
-        if /[ぁ-んー－]/ =~ j# 全角ひらがな
-          @width += 1
-        elsif /\A[ｧ-ﾝﾞﾟ]+\z/ =~ j# 半角型カタカナ
-          @width += 0.5
-        elsif /[ -~。-゜]/ =~ j# 半角
-          @width += 0.5
-        else
-          @width += 1
-        end
-      end
+      @width = text_check(@text[i])
       @max_width = @width.round if @max_width <= @width
     end
   end
@@ -342,27 +273,32 @@ class Sprite
     elsif height > @text.length
       raise ArgumentError.new("Sprite#width(height: #{height})over Sprite#height")
     else
-      @width = 0
-      @text[height].scan(/./) do |i|
-        if /\A[ぁ-んー－]+\z/ =~ i# 全角ひらがな
-          @width += 1
-        elsif /\A[ｧ-ﾝﾞﾟ]+\z/ =~ i# 半角型カタカナ
-          @width += 0.5
-        elsif /\A[ -~。-゜]+\z/ =~ i# 半角
-          @width += 0.5
-        else
-          @width += 1
-        end
-      end
-      return @width.round
+      @width = text_check(@text[height])
+      return @width
     end
   end
 
   def height
-    return @text.length
+    return @height
+  end
+
+  private
+  def text_check(text)
+    width = 0
+    text.scan(/./) do |i|
+      if /\A[ぁ-んー－]+\z/ =~ i# 全角ひらがな
+        width += 1
+      elsif /\A[ｧ-ﾝﾞﾟ]+\z/ =~ i# 半角型カタカナ
+        width += 0.5
+      elsif /\A[ -~。-゜]+\z/ =~ i# 半角
+        width += 0.5
+      else
+        width += 1
+      end
+    end
+    return width.round
   end
 end
-
 
 class Key
   ESCAPE = 0x1b
@@ -401,18 +337,7 @@ class Key
   end
 
   class << self
-    def kbhit()
-      if @@kbhit.call != 0
-        return true
-      else 
-        return false
-      end
-    end
-    
-    def getch()
-      return @@getch.call
-    end
-
+    # You have to write this to use keyboard!
     def update()
       if kbhit()
         @@key = getch()
@@ -422,6 +347,9 @@ class Key
       end
     end
 
+    # return Boolean  
+    # key_code "a-z", Key::(key_code)
+    # *plz show Key-Reference(https://github.com/stonesaw/Ruby-CUI-game#key)*
     def down?(key_code)
       if @@pressed == true
         return true if key_code == ANY
@@ -433,6 +361,19 @@ class Key
       else
         return false
       end
+    end
+
+    private
+    def kbhit()
+      if @@kbhit.call != 0
+        return true
+      else 
+        return false
+      end
+    end
+    
+    def getch()
+      return @@getch.call
     end
   end
 end
