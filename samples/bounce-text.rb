@@ -1,10 +1,10 @@
 #ruby -Ku
 require_relative './../Monochrome-Ruby'
 
-map = Map.new(text_hash: {0 => " "}, width: 32, height: 32)
+map = Map.new(text_hash: {0 => "　"}, width: 32, height: 32)
 text = Sprite.new(map.width / 2, map.height / 2, "Hello MonoChrome Ruby!")
 text.x -= (text.width / 2)
-wall_text = " "
+wall_text = "::"
 walls = []
 map.width.times do |x|
   2.times do |y|

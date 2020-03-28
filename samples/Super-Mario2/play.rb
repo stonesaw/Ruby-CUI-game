@@ -1,10 +1,11 @@
-# ---- 各キャラクター、アイテム用のクラス ----
-# 自機の動き2P追加も出来る
+# ---- 各キャラクター・アイテム用のクラス ----
 class Me < Sprite
+  attr_accessor :state
+
   def initialize(x, y, text, state = 0)
     super(x, y, text)
     @state = state
-    # state 0 => マリオ
+    # state 0 => マリオ(小さい状態)
     # state 1 => スーパーマリオ
     @jump = 0
   end
@@ -39,21 +40,21 @@ class Me < Sprite
     if @jump > 0 && (self.touch_head(Play.block) || self === Play.block)
       @jump = 0
       # 小さい状態のときはたたけない
-      if self.state == 1
+      if self.state >= 1
         # 当たっているブロックを配列に入れる
-        # nilが返ってきた場合は.compact!によって、nilを削除する
+        # nilが返ってきた場合は.compactによって、nilを削除する
         col = [
           self.check(Play.block, y: -1).first,
-          self.check(Play.block, y: -2).first,
+          # self.check(Play.block, y: -2).first,
           self.check(Play.block).first
-        ].compact!.first
+        ].compact.first
         # 当たっているブロックがあれば削除する
         unless col == nil
           # ブロックに敵が乗っていたら削除
           ene_col = [
             col.check(Play.enemies).first,
             col.check(Play.enemies, y: -1).first
-          ].compact!.first
+          ].compact.first
           unless ene_col == nil
             ene_col.vanish
             Sprite.clean(Play.enemies)
@@ -69,41 +70,40 @@ class Me < Sprite
     end
 
     # ハテナブロックをたたく
-    if @jump > 0 && (self.touch_head(Play.hatena) || self === Play.hatena)
+    col = [
+      self.check(Play.hatena, y: -1).first,
+      self.check(Play.hatena).first
+    ].compact.first
+    if @jump > 0 && col != nil
       @jump = 0
-      col = [
-        self.check(Play.hatena, y: -1).first,
-        self.check(Play.hatena, y: -2).first,
-        self.check(Play.hatena).first
-      ].compact!.first
-      unless col == nil
-        # ハテナブロックがまだたたかれていない場合
-        if col.text[0] == "？" || col.text[0] == "  "
-          col.text[0] = "■"
-          # アイテムがコイン
-          if col.item == "coin"
-            $coin += 1
-            $score += 200
-            #アイテムがキノコ
-          elsif col.item == "mushroom"
-            Play.mushroom << Mushroom.new(col.x, col.y - 2, "茸")
-          end
-          # ブロックに敵が乗っていたら削除
-          ene_col = [
-            col.check(Play.enemies).first,
-            col.check(Play.enemies, y: -1).first
-          ].compact!.first
-          unless ene_col == nil
-            ene_col.vanish
-            Sprite.clean(Play.enemies)
-            $score += 100
-          end
-        else# ハテナブロックがたたかれていた場合
-          self.y += 1
+      # ハテナブロックがまだたたかれていない場合
+      if col.text[0] == "？" || col.text[0] == "  " || col.text[0] == "□"
+        col.text[0] = "■"
+        # アイテムがコイン
+        if col.item == "coin"
+          $coin += 1
+          $score += 200
+        elsif col.item == "mushroom"#アイテムがキノコ
+          Play.mushroom << Mushroom.new(col.x, col.y - 2, "茸")
+        elsif col.item == "star"# アイテムがスター
+          Play.star << Star.new(col.x, col.y - 2, "★")
         end
+        # ブロックに敵が乗っていたら削除
+        ene_col = [
+          col.check(Play.enemies).first,
+          col.check(Play.enemies, y: -1).first
+        ].compact.first
+        unless ene_col == nil
+          ene_col.vanish
+          Sprite.clean(Play.enemies)
+          $score += 100
+        end
+      else# ハテナブロックが既にたたかれていた場合
+        self.y += 1
       end
-      # マリオが大きい状態の場合はy座標を調整
-      self.y += 1 if self.state == 1
+      # y座標を調整
+      self.y += 1 if (self.state % 10) == 1
+      self.y -= 1 if self.y < Play.h_nomal
     end
 
     # キノコを取る
@@ -114,20 +114,44 @@ class Me < Sprite
         self.check(Play.mushroom, x: -1).first,
         self.check(Play.mushroom, y: 1).first,
         self.check(Play.mushroom, y: -1).first
-      ].compact!
+      ].compact
       unless col == nil
+        # 取ったキノコを消す
         col.first.vanish
         Sprite.clean(Play.mushroom)
-        if @state == 0
-          @state = 1
+        # マリオの状態を変更
+        if (@state % 10) == 0
+          @state += 1
           self.y -= 1
         end
         $score += 1000
       end
     end
 
-    self.text = ["ｃ"] if @state == 0
-    self.text = ["ｃ", "人"] if @state == 1
+    # スターを取る
+    if (self === Play.star || self.touch(Play.star)) && !(self === Play.block || self === Play.hatena)
+      col = [
+        self.check(Play.star).first,
+        self.check(Play.star, x: 1).first,
+        self.check(Play.star, x: -1).first,
+        self.check(Play.star, y: 1).first,
+        self.check(Play.star, y: -1).first
+      ].compact
+      unless col == nil
+        # 取ったスターを消す
+        col.first.vanish
+        Sprite.clean(Play.star)
+        # マリオの状態を変更
+        @state += 10 if @state < 10
+        $score += 1000
+      end
+    end
+
+    # 状態によって描画されるテキストを変更
+    self.text = ["ｃ"] if @state == 0# マリオ(小さい状態)
+    self.text = ["ｃ", "人"] if @state == 1# スーパーマリオ
+    self.text = ["☆"] if @state == 10# スター(無敵)
+    self.text = ["☆", "人"] if @state == 11# スター(無敵)
 
     # 敵を踏む
     if self.touch_foot(Play.enemies)
@@ -142,16 +166,32 @@ class Me < Sprite
 
     # 敵との衝突
     if self === Play.enemies || self.touch_right(Play.enemies) || self.touch_left(Play.enemies)
+      # 小さい状態の時
       if self.state == 0
         self.text = "×"
         self.state = -1
+      elsif self.state >= 10# スター状態の時
+        # 衝突した敵を削除する
+        col = [
+          self.check(Play.enemies).first,
+          self.check(Play.enemies, x: 1).first,
+          self.check(Play.enemies, x: -1).first,
+          self.check(Play.enemies, y: 1).first,
+          self.check(Play.enemies, y: -1).first
+        ].compact
+        unless col == nil
+          col.first.vanish
+          Sprite.clean(Play.enemies)
+        end
+        # スコアを加算
+        $score += 100
       else
         self.state -= 1
         col = [
           self.check(Play.enemies).first,
           self.check(Play.enemies, x: 1).first,
           self.check(Play.enemies, x: -1).first
-        ].compact!
+        ].compact
         unless col == nil
           col.first.vanish
           Sprite.clean(Play.enemies)
@@ -159,18 +199,12 @@ class Me < Sprite
       end
     end
   end
-
-  def state
-    return @state
-  end
-
-  def state=(val)
-    @state = val
-  end
 end
 
 # class 敵
 class Enemy < Sprite
+  attr_accessor :dx
+
   def initialize(x, y, text, dx = -1)
     super(x, y, text)
     @dx = dx
@@ -189,30 +223,22 @@ class Enemy < Sprite
       end
     end
   end
-
-  def dx
-    return @dx
-  end
-
-  def dx=(val)
-    @dx = val
-  end
 end
 
 # class ハテナブロック
 class Hatena < Sprite
+  attr_reader :item
+
   def initialize(x, y, text, item)# item => str
     super(x, y, text)
     @item = item
-  end
-
-  def item
-    return @item
   end
 end
 
 # class キノコ
 class Mushroom < Sprite
+  attr_accessor :dx
+
   def initialize(x, y, text, dx = 1)
     super(x, y, text)
     @dx = dx
@@ -231,13 +257,29 @@ class Mushroom < Sprite
       end
     end
   end
+end
 
-  def dx
-    return @dx
+# class スター
+class Star < Sprite
+  attr_accessor :dx
+
+  def initialize(x, y, text, dx = 1)
+    super(x, y, text)
+    @dx = dx
   end
 
-  def dx=(val)
-    @dx = val
+  def self.update(sprite)
+    sprite.each do |sp|
+      # 向きを変える
+      sp.dx = -1 if sp.touch_right(Play.block) || sp.touch_right(Play.hatena) || sp.touch_right(Play.dokan)
+      sp.dx = 1 if sp.touch_left(Play.block) || sp.touch_left(Play.hatena) || sp.touch_left(Play.dokan)
+      # 移動
+      if sp.touch_foot(Play.wall) || sp.touch_foot(Play.block) || sp.touch_foot(Play.hatena) || sp.touch_foot(Play.dokan)
+        sp.x += sp.dx
+      else
+        sp.y += 1
+      end
+    end
   end
 end
 # ---- ----
@@ -246,7 +288,7 @@ end
 class Play
   def initialize
     # 2次元配列[height][width] を作成
-    @@map = Map.new(width: 190, height: 20, default_text: "' ")
+    @@map = Map.new(width: 190, height: 20)
     # 高さ
     @@h_ground = @@map.height - 2# 地面の高さ
     @@h_nomal = @@map.height - 5# ブロックの基本の高さ
@@ -256,7 +298,7 @@ class Play
     @@mario = Me.new(4, @@h_ground, "ｃ")
     # アイテム
     @@mushroom = []
-    star = []
+    @@star = []
     # 敵(クリボー)
     @@enemies = [
       Enemy.new(29, @@h_ground, "▲"),
@@ -373,21 +415,28 @@ class Play
     # --- Var ---
     $score = 0
     $coin = 0
+    $time = 400
     @@flg = 0
     @@pos_flg = 0
-    $time = 400
     @@count = 0
   end
 
   class << self
     def update
+      # エスケープキーが押されたら、Menuシーンへ
       Scene.next(init: true) if Key.down?(Key::ESCAPE)
+
+      # time
       @@count += 1
       $time -= 1 if (@@count % 4) == 0
 
       # マリオ
       @@mario.update
+
+      # キノコ(2フレームに一度更新)
       Mushroom.update(@@mushroom) if (@@count % 2) == 0
+      # スター(2フレームに一度更新)
+      Star.update(@@star) if (@@count % 2) == 0
 
       # マリオの位置によるフラグ(敵の出現)
       if @@mario.x > 65 && @@pos_flg == 0
@@ -454,15 +503,16 @@ class Play
       puts "#{$time}"
       
       # --- draw render map ---
-      draw = [@@mario, @@enemies, @@block, @@hatena, @@mushroom, @@flag, @@dokan, @@wall]
+      draw = [@@mario, @@enemies, @@block, @@hatena, @@mushroom, @@star, @@flag, @@dokan, @@wall]
 
       if @@mario.x < WIDTH / 2
-        @@map.render_draw(0, @@map.height - HEIGHT, WIDTH, HEIGHT, draw)
+        ox = 0
       elsif @@mario.x > @@map.width - 1 - WIDTH / 2
-        @@map.render_draw(@@map.width - WIDTH, @@map.height - HEIGHT, WIDTH, HEIGHT, draw)
+        ox = @@map.width - WIDTH
       else
-        @@map.render_draw(@@mario.x - WIDTH / 2, @@map.height - HEIGHT, WIDTH, HEIGHT, draw)
+        ox = @@mario.x - WIDTH / 2
       end
+      @@map.render_draw(ox, @@map.height - HEIGHT, WIDTH, HEIGHT, draw)
       
       # フラグがゲームオーバーまたはタイムアップだった時
       if @@flg == 1 || @@mario.state == -1
@@ -507,6 +557,14 @@ class Play
 
     def mushroom
       return @@mushroom
+    end
+
+    def star
+      return @@star
+    end
+
+    def h_nomal
+      return @@h_nomal
     end
   end
 end
