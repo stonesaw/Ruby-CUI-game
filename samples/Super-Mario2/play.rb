@@ -1,25 +1,30 @@
 # ---- 各キャラクター・アイテム用のクラス ----
 class Me < Sprite
-  attr_accessor :state
+  attr_accessor :state, :tick
 
   def initialize(x, y, text, state = 0)
     super(x, y, text)
     @state = state
     # state 0 => マリオ(小さい状態)
     # state 1 => スーパーマリオ
+    # state +10 => スター(無敵状態)
     @jump = 0
+    @tick = 0
+    # スターの時間制限用
   end
 
   def update
     # 移動
+    # 右にオブジェクトがあるときは無効
     self.x += 1 if Key.down?("d") && !self.touch_right(Play.wall) && !self.touch_right(Play.dokan)&& !self.touch_right(Play.block) && !self.touch_right(Play.hatena)
+    # 左にオブジェクトがあるときは無効
     self.x -= 1 if Key.down?("a") && !self.touch_left(Play.wall) && !self.touch_left(Play.dokan) && !self.touch_left(Play.block) && !self.touch_left(Play.hatena)
     
     # マップから出ないようにする
     self.x = 0 if self.x < 0
     self.x = (Play.map.width - 1) if self.x >= Play.map.width
 
-    # 地面に触れているかつスペースキーが押されたときジャンプのフラグを立てる
+    # 地面に触れているか
     if self.touch_foot(Play.wall) || self.touch_foot(Play.block) || self.touch_foot(Play.hatena) || self.touch_foot(Play.dokan)
       @jump = 1 if Key.down?(Key::SPACE)
     else
@@ -38,9 +43,8 @@ class Me < Sprite
 
     # ブロックをたたく(ジャンプしている・上昇しているときのみ)
     if @jump > 0 && (self.touch_head(Play.block) || self === Play.block)
-      @jump = 0
-      # 小さい状態のときはたたけない
-      if self.state >= 1
+      @jump = 0 # ジャンプのフラグを下ろす
+      if self.state >= 1 # 小さい状態のときはたたけない
         # 当たっているブロックを配列に入れる
         # nilが返ってきた場合は.compactによって、nilを削除する
         col = [
@@ -48,6 +52,7 @@ class Me < Sprite
           # self.check(Play.block, y: -2).first,
           self.check(Play.block).first
         ].compact.first
+
         # 当たっているブロックがあれば削除する
         unless col == nil
           # ブロックに敵が乗っていたら削除
@@ -60,6 +65,7 @@ class Me < Sprite
             Sprite.clean(Play.enemies)
             $score += 100
           end
+
           # ブロックを削除
           col.vanish
           Sprite.clean(Play.block)
@@ -78,15 +84,15 @@ class Me < Sprite
       @jump = 0
       # ハテナブロックがまだたたかれていない場合
       if col.text[0] == "？" || col.text[0] == "  " || col.text[0] == "□"
+        # ハテナブロックのテキストを獲得済みの状態に
         col.text[0] = "■"
-        # アイテムがコイン
-        if col.item == "coin"
+        if col.item == "coin" # アイテムがコイン
           $coin += 1
           $score += 200
-        elsif col.item == "mushroom"#アイテムがキノコ
-          Play.mushroom << Mushroom.new(col.x, col.y - 2, "茸")
-        elsif col.item == "star"# アイテムがスター
-          Play.star << Star.new(col.x, col.y - 2, "★")
+        elsif col.item == "mushroom" #アイテムがキノコ
+          Play.mushroom << Mushroom.new(col.x, col.y - 2)
+        elsif col.item == "star" # アイテムがスター
+          Play.star << Star.new(col.x, col.y - 2)
         end
         # ブロックに敵が乗っていたら削除
         ene_col = [
@@ -120,8 +126,8 @@ class Me < Sprite
         col.first.vanish
         Sprite.clean(Play.mushroom)
         # マリオの状態を変更
-        if (@state % 10) == 0
-          @state += 1
+        if (self.state % 10) == 0
+          self.state += 1
           self.y -= 1
         end
         $score += 1000
@@ -142,16 +148,22 @@ class Me < Sprite
         col.first.vanish
         Sprite.clean(Play.star)
         # マリオの状態を変更
-        @state += 10 if @state < 10
+        self.state += 10 if self.state < 10
         $score += 1000
+        self.tick = Play.count
       end
     end
 
+    # スターの時間制限
+    if self.state >= 10 && (Play.count - self.tick) > 80
+       self.state -= 10
+    end
+
     # 状態によって描画されるテキストを変更
-    self.text = ["ｃ"] if @state == 0# マリオ(小さい状態)
-    self.text = ["ｃ", "人"] if @state == 1# スーパーマリオ
-    self.text = ["☆"] if @state == 10# スター(無敵)
-    self.text = ["☆", "人"] if @state == 11# スター(無敵)
+    self.text = ["ｃ"] if self.state == 0# マリオ(小さい状態)
+    self.text = ["ｃ", "人"] if self.state == 1# スーパーマリオ
+    self.text = ["☆"] if self.state == 10# スター(無敵)
+    self.text = ["☆", "人"] if self.state == 11# スター(無敵)
 
     # 敵を踏む
     if self.touch_foot(Play.enemies)
@@ -239,7 +251,7 @@ end
 class Mushroom < Sprite
   attr_accessor :dx
 
-  def initialize(x, y, text, dx = 1)
+  def initialize(x, y, text = "茸", dx = 1)
     super(x, y, text)
     @dx = dx
   end
@@ -263,7 +275,7 @@ end
 class Star < Sprite
   attr_accessor :dx
 
-  def initialize(x, y, text, dx = 1)
+  def initialize(x, y, text = "★", dx = 1)
     super(x, y, text)
     @dx = dx
   end
@@ -283,6 +295,7 @@ class Star < Sprite
   end
 end
 # ---- ----
+
 
 # シーン - プレイ
 class Play
@@ -307,111 +320,9 @@ class Play
       Enemy.new(50, @@h_ground, "▲")
     ]
     
-    # --- ブロック生成 ---
-    # 地面
-    @@wall = []
-    @@map.width.times do |i|
-      next if (i == 64 || i == 65)
-      next if (81 <= i && i <= 83)
-      next if (146 <= i && i <= 147)
-      @@wall << Sprite.new(i, @@map.height - 1, "■")
-    end
-    # 壊せるブロック
-    @@block = [
-      Sprite.new(22, @@h_nomal, "□"),
-      Sprite.new(24, @@h_nomal, "□"),
-      Sprite.new(26, @@h_nomal, "□"),
-      Sprite.new(72, @@h_nomal, "□"),
-      Sprite.new(74, @@h_nomal, "□"),
-      Sprite.new(86, @@h_high, "□"),
-      Sprite.new(87, @@h_high, "□"),
-      Sprite.new(88, @@h_high, "□"),
-      Sprite.new(89, @@h_nomal, "□"),
-      Sprite.new(94, @@h_nomal, "□"),
-      Sprite.new(112, @@h_nomal, "□"),
-      Sprite.new(115, @@h_high, "□"),
-      Sprite.new(116, @@h_high, "□"),
-      Sprite.new(117, @@h_high, "□"),
-      Sprite.new(122, @@h_high, "□"),
-      Sprite.new(123, @@h_nomal, "□"),
-      Sprite.new(124, @@h_nomal, "□"),
-      Sprite.new(125, @@h_high, "□"),
-      Sprite.new(161, @@h_nomal, "□"),
-      Sprite.new(162, @@h_nomal, "□"),
-      Sprite.new(164, @@h_nomal, "□")
-    ]
-    8.times do |x|
-      @@block << Sprite.new(75 + x, @@h_high, "□")
-    end
-    # ハテナブロック
-    @@hatena = [
-      Hatena.new(18, @@h_nomal, "？", "coin"),
-      Hatena.new(23, @@h_nomal, "？", "mushroom"),
-      Hatena.new(24, @@h_high, "？", "coin"),
-      Hatena.new(25, @@h_nomal, "？", "coin"),
-      Hatena.new(59, @@h_nomal, "  ", "mushroom"),#隠れキノコ
-      Hatena.new(73, @@h_nomal, "？", "coin"),
-      Hatena.new(89, @@h_high, "？", "coin"),
-      Hatena.new(95, @@h_nomal, "□", "star"),# 隠れスター
-      Hatena.new(100, @@h_nomal, "？", "coin"),
-      Hatena.new(103, @@h_nomal, "？", "coin"),
-      Hatena.new(103, @@h_high, "？", "mushroom"),
-      Hatena.new(106, @@h_nomal, "？", "coin"),
-      Hatena.new(123, @@h_high, "？", "coin"),
-      Hatena.new(124, @@h_high, "？", "coin"),
-      Hatena.new(163, @@h_nomal, "？", "coin")
-    ]
-    # 土管
-    @@dokan = [
-      Sprite.new(30, @@map.height - 3, ["|==|", " || "]),
-      Sprite.new(38, @@map.height - 4, ["|==|", " || ", " || "]),
-      Sprite.new(44, @@map.height - 5, ["|==|", " || ", " || ", " || "]),
-      Sprite.new(52, @@map.height - 5, ["|==|", " || ", " || ", " || "]),
-      Sprite.new(155, @@map.height - 3, ["|==|", " || "]),
-      Sprite.new(172, @@map.height - 3, ["|==|", " || "])
-    ]
-    # 階段
-    2.times do |i|
-      pos = 127 if i == 0
-      pos = 141 if i == 1
-      4.times do |x|
-        (x+1).times do |y|
-          @@wall << Sprite.new(pos + x, @@h_ground - y, "■")
-        end
-      end
-    end
-    4.times do |y|
-      @@wall << Sprite.new(145, @@h_ground - y, "■")
-    end
-    # 階段(下り)
-    2.times do |i|
-      pos = 133 if i == 0
-      pos = 148 if i == 1
-      4.times do |x|
-        y = 4
-        (y - x).times do
-          @@wall << Sprite.new(pos + x, @@map.height - 6 + y, "■")
-          y -= 1
-        end
-      end
-    end
-    # 最後の階段
-    6.times do |x|
-      (x + 1).times do |y|
-        @@wall << Sprite.new(174 + x, @@h_ground - y, "■")
-      end
-    end
-    6.times do |y|
-      @@wall << Sprite.new(180, @@h_ground - y, "■")
-    end
-    # 旗
-    @@flag = []
-    7.times do |i|
-      @@flag << Sprite.new(@@map.width - 2, @@map.height - 3 - i, "| ")
-    end
-    @@flag << Sprite.new(@@map.width - 2, @@h_high, "▶ ")
-    @@wall << Sprite.new(@@map.width - 2, @@h_ground, "■")
-    
+    # ブロック生成
+    Play.create_block()
+
     # --- Var ---
     $score = 0
     $coin = 0
@@ -486,7 +397,7 @@ class Play
         @@mario.text = "×"
         @@flg = 1
       end
-    
+      
       # --- draw data ---
       print "   MARIO            WORLD  TIME\n   "
       (6 - $score.to_s.length).times do# 0の数を調整
@@ -524,47 +435,158 @@ class Play
     end
   
     def map
-      return @@map
+      @@map
     end
 
     def mario
-      return @@mario
+      @@mario
     end
 
     def enemies
-      return @@enemies
+      @@enemies
     end
 
     def block
-      return @@block
+      @@block
     end
 
     def wall
-      return @@wall
+      @@wall
     end
 
     def hatena
-      return @@hatena
+      @@hatena
     end
 
     def dokan
-      return @@dokan
+      @@dokan
     end
 
     def flag
-      return @@flag
+      @@flag
     end
 
     def mushroom
-      return @@mushroom
+      @@mushroom
     end
 
     def star
-      return @@star
+      @@star
     end
 
     def h_nomal
-      return @@h_nomal
+      @@h_nomal
+    end
+
+    def count
+      @@count
+    end
+
+    def create_block()
+      # --- ブロック生成 ---
+      # 地面
+      @@wall = []
+      @@map.width.times do |i|
+        next if (i == 64 || i == 65)
+        next if (81 <= i && i <= 83)
+        next if (146 <= i && i <= 147)
+        @@wall << Sprite.new(i, @@map.height - 1, "■")
+      end
+      # 壊せるブロック
+      @@block = [
+        Sprite.new(22, @@h_nomal, "□"),
+        Sprite.new(24, @@h_nomal, "□"),
+        Sprite.new(26, @@h_nomal, "□"),
+        Sprite.new(72, @@h_nomal, "□"),
+        Sprite.new(74, @@h_nomal, "□"),
+        Sprite.new(86, @@h_high, "□"),
+        Sprite.new(87, @@h_high, "□"),
+        Sprite.new(88, @@h_high, "□"),
+        Sprite.new(89, @@h_nomal, "□"),
+        Sprite.new(94, @@h_nomal, "□"),
+        Sprite.new(112, @@h_nomal, "□"),
+        Sprite.new(115, @@h_high, "□"),
+        Sprite.new(116, @@h_high, "□"),
+        Sprite.new(117, @@h_high, "□"),
+        Sprite.new(122, @@h_high, "□"),
+        Sprite.new(123, @@h_nomal, "□"),
+        Sprite.new(124, @@h_nomal, "□"),
+        Sprite.new(125, @@h_high, "□"),
+        Sprite.new(161, @@h_nomal, "□"),
+        Sprite.new(162, @@h_nomal, "□"),
+        Sprite.new(164, @@h_nomal, "□")
+      ]
+      8.times do |x|
+        @@block << Sprite.new(75 + x, @@h_high, "□")
+      end
+      # ハテナブロック
+      @@hatena = [
+        Hatena.new(18, @@h_nomal, "？", "coin"),
+        Hatena.new(23, @@h_nomal, "？", "mushroom"),
+        Hatena.new(24, @@h_high, "？", "coin"),
+        Hatena.new(25, @@h_nomal, "？", "coin"),
+        Hatena.new(59, @@h_nomal, "  ", "mushroom"),#隠れキノコ
+        Hatena.new(73, @@h_nomal, "？", "coin"),
+        Hatena.new(89, @@h_high, "？", "coin"),
+        Hatena.new(95, @@h_nomal, "□", "star"),# 隠れスター
+        Hatena.new(100, @@h_nomal, "？", "coin"),
+        Hatena.new(103, @@h_nomal, "？", "coin"),
+        Hatena.new(103, @@h_high, "？", "mushroom"),
+        Hatena.new(106, @@h_nomal, "？", "coin"),
+        Hatena.new(123, @@h_high, "？", "coin"),
+        Hatena.new(124, @@h_high, "？", "coin"),
+        Hatena.new(163, @@h_nomal, "？", "coin")
+      ]
+      # 土管
+      @@dokan = [
+        Sprite.new(30, @@map.height - 3, ["|==|", " || "]),
+        Sprite.new(38, @@map.height - 4, ["|==|", " || ", " || "]),
+        Sprite.new(44, @@map.height - 5, ["|==|", " || ", " || ", " || "]),
+        Sprite.new(52, @@map.height - 5, ["|==|", " || ", " || ", " || "]),
+        Sprite.new(155, @@map.height - 3, ["|==|", " || "]),
+        Sprite.new(172, @@map.height - 3, ["|==|", " || "])
+      ]
+      # 階段
+      2.times do |i|
+        pos = 127 if i == 0
+        pos = 141 if i == 1
+        4.times do |x|
+          (x+1).times do |y|
+            @@wall << Sprite.new(pos + x, @@h_ground - y, "■")
+          end
+        end
+      end
+      4.times do |y|
+        @@wall << Sprite.new(145, @@h_ground - y, "■")
+      end
+      # 階段(下り)
+      2.times do |i|
+        pos = 133 if i == 0
+        pos = 148 if i == 1
+        4.times do |x|
+          y = 4
+          (y - x).times do
+            @@wall << Sprite.new(pos + x, @@map.height - 6 + y, "■")
+            y -= 1
+          end
+        end
+      end
+      # 最後の階段
+      6.times do |x|
+        (x + 1).times do |y|
+          @@wall << Sprite.new(174 + x, @@h_ground - y, "■")
+        end
+      end
+      6.times do |y|
+        @@wall << Sprite.new(180, @@h_ground - y, "■")
+      end
+      # 旗
+      @@flag = []
+      7.times do |i|
+        @@flag << Sprite.new(@@map.width - 2, @@map.height - 3 - i, "| ")
+      end
+      @@flag << Sprite.new(@@map.width - 2, @@h_high, "▶ ")
+      @@wall << Sprite.new(@@map.width - 2, @@h_ground, "■")
     end
   end
 end
