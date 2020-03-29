@@ -5,11 +5,14 @@ CUI(CLI)のゲーム用ライブラリ
 - Ruby 2. 6. 5  
 - Ruby 2. 1. 6  
 で動作確認済み  
-Win32APIを使っているため、おそらくMacでは使用不可
 
-# 使い方
+＊Macでは使用不可
+
+# Usage
 git clone, ZIPファイルなどでダウンロードしてrequire(_relative)すれば使えます。  
+
 サンプルやチュートリアルも少しですが作りました。
+./exeにはアプリ化したものが入っているのでRuby環境がなくても遊べます。
 
 # Comment  
 2020-春休み課題  
@@ -125,7 +128,7 @@ __需要 is nil !__
 - ## KeyCode
     |KeyCode|キー|
     |:---|:---|
-    |Key::ESCAPE | エスケープ
+    |Key::ESCAPE|エスケープ
     |Key::RETURN|エンター
     |Key::UP|矢印(上)
     |Key::DOWN|矢印(下)
@@ -139,7 +142,7 @@ __需要 is nil !__
     |Key::K_END|エンド
     |Key::PAGEUP|ページアップ
     |Key::PAGEDOWN|ページダウン
-    |Key::INSERT | インサート
+    |Key::INSERT|インサート
     |Key::F1|F1
     |Key::F2|F2
     |Key::F3|F3
@@ -152,5 +155,4 @@ __需要 is nil !__
     |Key::F10|F10
     |Key::F11|F11
     |Key::F12|F12
-- Key::ANY  
-    何かのキーが押されたときに真を返す
+    |Key::ANY|何かのキー
