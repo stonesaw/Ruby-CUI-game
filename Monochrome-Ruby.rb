@@ -1,5 +1,6 @@
 require 'Win32API'
 
+# Reference(https://github.com/stonesaw/Ruby-CUI-game#map-class)  
 class Map
   attr_reader :map, :text_hash, :width, :height
   attr_accessor :default_text
@@ -7,20 +8,23 @@ class Map
   def initialize(map: [[]], text_hash: {0 => "  "}, width: map[0].length, height: map.length, default_text: -1)
     @map = map
     @text_hash = text_hash
+    @width = width
+    @height = height
+
+    @map.each do |ary|
+      ary.each do |point|
+        unless @text_hash.include?(point) || point == -1
+          raise ArgumentError.new("i dont know text_hash => #{point}")
+        end
+      end
+    end
+
     if default_text == -1
       @default_text = text_hash.first[1]
     else
       @default_text = default_text
     end
-    @map.length.times do |y|
-      @map[y].length.times do |x|
-        unless @text_hash.include?(@map[y][x]) || @map[y][x] == -1
-          raise ArgumentError.new("i dont know text_hash => #{@map[y][x]}")
-        end
-      end
-    end
-    @width = width
-    @height = height
+    
     if @width < @map[0].length
       raise ArgumentError.new("Need map#width(#{@width}) >= map length(#{@map[0].length})")
     elsif @width > @map[0].length
@@ -39,7 +43,7 @@ class Map
       need.times do |i|
         x_ary = []
         @width.times do
-          x_ary << -1 #Map.default_text
+          x_ary << -1 # default_text
         end
         @map << x_ary
       end
@@ -51,6 +55,7 @@ class Map
       x = 0
       self.width.times do # x
         drawed = 0
+        # draw sprite
         drawing.each do |dr|
           if dr.class == Array
             sprites = dr
@@ -68,6 +73,7 @@ class Map
           end
           break if drawed == 1
         end
+        # draw map-text
         if drawed == 0
           if @map[y][x] == -1
             print @default_text
@@ -90,6 +96,7 @@ class Map
       width.times do # x
         drawed = 0
         break if x >= self.width || x - ox >= width
+        # draw sprite
         drawing.each do |dr|
           if dr.class == Array
             sprites = dr
@@ -107,6 +114,7 @@ class Map
           end
           break if drawed == 1
         end
+        # draw map-text
         if drawed == 0
           if @map[y][x] == -1
             print @default_text
@@ -128,6 +136,7 @@ class Map
   end
 end
 
+# Reference(https://github.com/stonesaw/Ruby-CUI-game#sprite-class)
 class Sprite
   attr_accessor :x, :y
 
@@ -300,6 +309,7 @@ class Sprite
   end
 end
 
+# Key-Reference(https://github.com/stonesaw/Ruby-CUI-game#key-class)
 class Key
   ESCAPE = 0x1b
   RETURN = 0x0d
@@ -337,7 +347,6 @@ class Key
   end
 
   class << self
-    # You have to write this to use keyboard!
     def update()
       if kbhit()
         @@key = getch()
@@ -347,9 +356,6 @@ class Key
       end
     end
 
-    # return Boolean  
-    # key_code "a-z", Key::(key_code)
-    # *plz show Key-Reference(https://github.com/stonesaw/Ruby-CUI-game#key)*
     def down?(key_code)
       if @@pressed == true
         return true if key_code == ANY
